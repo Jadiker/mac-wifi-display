@@ -35,3 +35,4 @@ The release binary will be at:
 The app uses HTTPS `HEAD` requests instead of downloading `google.com`, so each probe only exchanges headers and TLS traffic. At the default 5 second interval, this is designed to stay tiny while still detecting the "Wi-Fi looks connected, but nothing actually responds" case quickly.
 
 The displayed data totals are estimates based on HTTP request and response headers. They do not include every byte of lower-level network overhead such as TCP, TLS, IP, or Wi-Fi framing.
+# mac-wifi-display
