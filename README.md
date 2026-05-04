@@ -115,3 +115,7 @@ The displayed data totals are estimates based on HTTP request and response heade
 - The current probe endpoint is `https://www.google.com/generate_204`.
 - A failed probe can mean the internet is unavailable, DNS or HTTPS traffic is blocked, the endpoint is unreachable from the current network, or the request timed out.
 - The app uses native AppKit and has no package dependencies.
+
+## License
+
+Actual Wi-Fi Bars is licensed under the GNU General Public License v3.0 or later. See [LICENSE](LICENSE) for details.
