@@ -32,13 +32,15 @@ It also includes actions for:
 - macOS 13 or newer
 - Swift 5.9 or newer
 
-## Run
+## Run from Terminal
+
+Clone or download this repository, open Terminal in the project folder, then run:
 
 ```sh
 swift run ActualWifiBars
 ```
 
-The app does not open a Dock icon. Look for the Wi-Fi-shaped status item in the macOS menu bar.
+The app does not open a Dock icon. Look for the Wi-Fi-shaped status item in the macOS menu bar. To stop it, open the menu bar item and choose **Quit Actual Wi-Fi Bars**, or press `Control-C` in the Terminal window if you are still running it with `swift run`.
 
 ## Build
 
@@ -57,6 +59,50 @@ You can launch that binary directly:
 ```sh
 .build/release/ActualWifiBars
 ```
+
+This is useful for development, but it is still just a command-line executable. For a normal macOS app you can keep in Applications, use the app bundle script below.
+
+## Build the macOS App
+
+The repository includes a packaging script that builds a release binary, creates a real `.app` bundle, and generates the green full-bars app icon:
+
+```sh
+scripts/build_app.sh
+```
+
+The finished app will be created at:
+
+```text
+.build/release/Actual Wi-Fi Bars.app
+```
+
+You can launch that app directly from Terminal:
+
+```sh
+open ".build/release/Actual Wi-Fi Bars.app"
+```
+
+## Install into Applications
+
+To build the app and copy it into your Applications folder:
+
+```sh
+scripts/build_app.sh --install
+```
+
+This installs:
+
+```text
+/Applications/Actual Wi-Fi Bars.app
+```
+
+Then launch it like any other Mac app:
+
+```sh
+open -a "Actual Wi-Fi Bars"
+```
+
+If macOS reports that it cannot copy into `/Applications`, build the app with `scripts/build_app.sh` and drag `.build/release/Actual Wi-Fi Bars.app` into Applications in Finder.
 
 ## Bandwidth
 
