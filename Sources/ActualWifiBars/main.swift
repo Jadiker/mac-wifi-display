@@ -71,20 +71,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setStatusIcon(named symbolName: String, accessibilityDescription: String, tintColor: NSColor) {
         guard let button = statusItem.button else { return }
 
-        if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: accessibilityDescription) {
-            image.isTemplate = true
-            button.title = ""
-            button.image = image
-            button.imagePosition = .imageOnly
-            button.contentTintColor = tintColor
-            appLogger.debug("Set status icon image. symbol=\(symbolName, privacy: .public)")
-        } else {
-            button.image = nil
-            button.title = symbolName == "wifi.slash" ? "Wi-Fi x" : "Wi-Fi"
-            button.imagePosition = .noImage
-            button.contentTintColor = .labelColor
-            appLogger.error("SF Symbol unavailable; falling back to text. symbol=\(symbolName, privacy: .public)")
-        }
+        let image = StatusIconRenderer.image(symbolName: symbolName, tintColor: tintColor)
+        button.title = ""
+        button.image = image
+        button.imagePosition = .imageOnly
+        button.imageScaling = .scaleProportionallyDown
+        button.contentTintColor = nil
+        appLogger.debug("Set custom status icon. symbol=\(symbolName, privacy: .public) imageSize=\(image.size.width, privacy: .public)x\(image.size.height, privacy: .public)")
     }
 
     @objc private func checkNow() {
@@ -122,6 +115,75 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appLogger.notice("Quit requested")
         monitor.stop()
         NSApp.terminate(nil)
+    }
+}
+
+enum StatusIconRenderer {
+    static func image(symbolName: String, tintColor: NSColor) -> NSImage {
+        let size = NSSize(width: 20, height: 18)
+        let image = NSImage(size: size)
+        image.lockFocus()
+
+        NSColor.clear.setFill()
+        NSRect(origin: .zero, size: size).fill()
+
+        let color = tintColor.usingColorSpace(.deviceRGB) ?? .labelColor
+        color.setStroke()
+        color.setFill()
+
+        let center = NSPoint(x: 10, y: 2.5)
+        drawArc(center: center, radius: 13.2, lineWidth: 1.8)
+        drawArc(center: center, radius: 9.2, lineWidth: 1.8)
+        drawArc(center: center, radius: 5.2, lineWidth: 1.8)
+
+        NSBezierPath(ovalIn: NSRect(x: 8.3, y: 1.0, width: 3.4, height: 3.4)).fill()
+
+        if symbolName == "wifi.slash" {
+            drawSlash(in: size, color: color)
+        } else if symbolName == "wifi.exclamationmark" {
+            drawExclamation(in: size, color: color)
+        }
+
+        image.unlockFocus()
+        image.isTemplate = false
+        return image
+    }
+
+    private static func drawArc(center: NSPoint, radius: CGFloat, lineWidth: CGFloat) {
+        let path = NSBezierPath()
+        path.appendArc(
+            withCenter: center,
+            radius: radius,
+            startAngle: 42,
+            endAngle: 138,
+            clockwise: false
+        )
+        path.lineWidth = lineWidth
+        path.lineCapStyle = .round
+        path.stroke()
+    }
+
+    private static func drawSlash(in size: NSSize, color: NSColor) {
+        color.setStroke()
+        let path = NSBezierPath()
+        path.move(to: NSPoint(x: 3.5, y: 3))
+        path.line(to: NSPoint(x: 16.5, y: 16))
+        path.lineWidth = 2
+        path.lineCapStyle = .round
+        path.stroke()
+    }
+
+    private static func drawExclamation(in size: NSSize, color: NSColor) {
+        color.setStroke()
+        let path = NSBezierPath()
+        path.move(to: NSPoint(x: 16, y: 4))
+        path.line(to: NSPoint(x: 16, y: 10))
+        path.lineWidth = 1.8
+        path.lineCapStyle = .round
+        path.stroke()
+
+        color.setFill()
+        NSBezierPath(ovalIn: NSRect(x: 15, y: 12.2, width: 2, height: 2)).fill()
     }
 }
 
