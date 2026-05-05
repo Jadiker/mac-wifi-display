@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let reliabilityMenuItem = NSMenuItem(title: "Reliability: --", action: nil, keyEquivalent: "")
     private let dataMenuItem = NSMenuItem(title: "Data: --", action: nil, keyEquivalent: "")
     private let lastCheckMenuItem = NSMenuItem(title: "Last check: --", action: nil, keyEquivalent: "")
+    private let versionMenuItem = NSMenuItem(title: AppDelegate.versionText, action: nil, keyEquivalent: "")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         appLogger.notice("Application did finish launching")
@@ -43,12 +44,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         reliabilityMenuItem.isEnabled = false
         dataMenuItem.isEnabled = false
         lastCheckMenuItem.isEnabled = false
+        versionMenuItem.isEnabled = false
 
         menu.addItem(statusMenuItem)
         menu.addItem(latencyMenuItem)
         menu.addItem(reliabilityMenuItem)
         menu.addItem(dataMenuItem)
         menu.addItem(lastCheckMenuItem)
+        menu.addItem(versionMenuItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Check Now", action: #selector(checkNow), keyEquivalent: "r"))
         menu.addItem(NSMenuItem(title: "Show Connectivity Graph", action: #selector(showGraph), keyEquivalent: "g"))
@@ -80,6 +83,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.imageScaling = .scaleProportionallyDown
         button.contentTintColor = nil
         appLogger.debug("Set custom status icon. symbol=\(symbolName, privacy: .public) imageSize=\(image.size.width, privacy: .public)x\(image.size.height, privacy: .public)")
+    }
+
+    private static var versionText: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String
+        let build = info?["CFBundleVersion"] as? String
+
+        switch (version, build) {
+        case let (.some(version), .some(build)):
+            return "Version: \(version) (\(build))"
+        case let (.some(version), .none):
+            return "Version: \(version)"
+        default:
+            return "Version: Development"
+        }
     }
 
     @objc private func checkNow() {
