@@ -143,7 +143,7 @@ enum StatusIconRenderer {
         if symbolName == "wifi.slash" {
             drawSlash(in: size, color: color)
         } else if symbolName == "wifi.exclamationmark" {
-            drawExclamation(in: size, color: color)
+            drawExclamation(in: size)
         }
 
         image.unlockFocus()
@@ -175,17 +175,17 @@ enum StatusIconRenderer {
         path.stroke()
     }
 
-    private static func drawExclamation(in size: NSSize, color: NSColor) {
-        color.setStroke()
+    private static func drawExclamation(in size: NSSize) {
+        NSColor.systemYellow.setStroke()
         let path = NSBezierPath()
-        path.move(to: NSPoint(x: 16, y: 4))
-        path.line(to: NSPoint(x: 16, y: 10))
+        path.move(to: NSPoint(x: 16, y: 7.8))
+        path.line(to: NSPoint(x: 16, y: 13.8))
         path.lineWidth = 1.8
         path.lineCapStyle = .round
         path.stroke()
 
-        color.setFill()
-        NSBezierPath(ovalIn: NSRect(x: 15, y: 12.2, width: 2, height: 2)).fill()
+        NSColor.systemYellow.setFill()
+        NSBezierPath(ovalIn: NSRect(x: 15, y: 3.8, width: 2, height: 2)).fill()
     }
 }
 
