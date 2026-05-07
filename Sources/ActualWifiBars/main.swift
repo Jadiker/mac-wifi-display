@@ -447,7 +447,7 @@ final class ConnectivityGraphView: NSView {
         let bounds = bounds.insetBy(dx: 24, dy: 20)
         drawHeader(in: bounds)
 
-        let graphRect = NSRect(x: bounds.minX, y: bounds.minY + 72, width: bounds.width, height: bounds.height - 102)
+        let graphRect = NSRect(x: bounds.minX, y: bounds.minY + 76, width: bounds.width, height: bounds.height - 128)
         drawGraph(in: graphRect)
         drawFooter(in: bounds)
     }
@@ -459,34 +459,41 @@ final class ConnectivityGraphView: NSView {
     }
 
     private func drawGraph(in rect: NSRect) {
-        NSColor.separatorColor.setStroke()
-        let border = NSBezierPath(rect: rect)
-        border.lineWidth = 1
-        border.stroke()
-
         guard !snapshot.historyForGraph.isEmpty else {
-            drawText("No probes yet", at: NSPoint(x: rect.midX - 38, y: rect.midY - 8), font: .systemFont(ofSize: 13), color: .secondaryLabelColor)
+            let now = Date()
+            let plotRect = plotRect(in: rect)
+            drawPlotBackground(in: rect)
+            drawGrid(in: plotRect, outerRect: rect, start: now.addingTimeInterval(-3600), visibleWindow: 3600)
+            drawText("No probes yet", at: NSPoint(x: plotRect.midX - 38, y: plotRect.midY - 8), font: .systemFont(ofSize: 13), color: .secondaryLabelColor)
             return
         }
 
         let now = Date()
-        let start = now.addingTimeInterval(-3600)
         let maxLatency: TimeInterval = 1.0
         let samples = snapshot.historyForGraph
+        let oldestSample = samples.first?.checkedAt ?? now
+        let visibleWindow = graphWindowLength(from: oldestSample, to: now)
+        let start = now.addingTimeInterval(-visibleWindow)
+        let plotRect = plotRect(in: rect)
 
-        NSColor.systemGreen.withAlphaComponent(0.18).setFill()
-        rect.fill()
+        drawPlotBackground(in: rect)
+        drawGrid(in: plotRect, outerRect: rect, start: start, visibleWindow: visibleWindow)
 
         let path = NSBezierPath()
+        path.lineCapStyle = .round
+        path.lineJoinStyle = .round
         var didMove = false
 
+        NSGraphicsContext.saveGraphicsState()
+        NSBezierPath(rect: plotRect).setClip()
+
         for sample in samples {
-            let xRatio = max(0, min(1, sample.checkedAt.timeIntervalSince(start) / 3600))
-            let x = rect.minX + rect.width * xRatio
+            let xRatio = max(0, min(1, sample.checkedAt.timeIntervalSince(start) / visibleWindow))
+            let x = plotRect.minX + plotRect.width * xRatio
 
             if sample.success, let latency = sample.latency {
                 let yRatio = max(0, min(1, latency / maxLatency))
-                let y = rect.maxY - rect.height * yRatio
+                let y = plotRect.maxY - plotRect.height * yRatio
                 let point = NSPoint(x: x, y: y)
                 if didMove {
                     path.line(to: point)
@@ -494,9 +501,8 @@ final class ConnectivityGraphView: NSView {
                     path.move(to: point)
                     didMove = true
                 }
-                drawDot(at: point, color: .systemBlue, radius: 2.5)
             } else {
-                drawFailureMarker(x: x, rect: rect)
+                drawFailureMarker(x: x, rect: plotRect, visibleWindow: visibleWindow)
                 didMove = false
             }
         }
@@ -505,10 +511,116 @@ final class ConnectivityGraphView: NSView {
         path.lineWidth = 2
         path.stroke()
 
-        drawText("now", at: NSPoint(x: rect.maxX - 25, y: rect.maxY + 6), font: .systemFont(ofSize: 11), color: .tertiaryLabelColor)
-        drawText("-1h", at: NSPoint(x: rect.minX, y: rect.maxY + 6), font: .systemFont(ofSize: 11), color: .tertiaryLabelColor)
-        drawText("1s", at: NSPoint(x: rect.minX + 6, y: rect.minY + 4), font: .systemFont(ofSize: 11), color: .tertiaryLabelColor)
-        drawText("0ms", at: NSPoint(x: rect.minX + 6, y: rect.maxY - 18), font: .systemFont(ofSize: 11), color: .tertiaryLabelColor)
+        for sample in samples where sample.success {
+            guard let latency = sample.latency else { continue }
+            let xRatio = max(0, min(1, sample.checkedAt.timeIntervalSince(start) / visibleWindow))
+            let yRatio = max(0, min(1, latency / maxLatency))
+            let point = NSPoint(
+                x: plotRect.minX + plotRect.width * xRatio,
+                y: plotRect.maxY - plotRect.height * yRatio
+            )
+            drawDot(at: point, color: .systemBlue, radius: 2.5)
+        }
+
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    private func drawPlotBackground(in rect: NSRect) {
+        NSColor.controlBackgroundColor.setFill()
+        NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6).fill()
+
+        NSColor.separatorColor.withAlphaComponent(0.75).setStroke()
+        let border = NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6)
+        border.lineWidth = 1
+        border.stroke()
+    }
+
+    private func plotRect(in outerRect: NSRect) -> NSRect {
+        NSRect(
+            x: outerRect.minX + 54,
+            y: outerRect.minY + 14,
+            width: outerRect.width - 68,
+            height: outerRect.height - 44
+        )
+    }
+
+    private func drawGrid(in plotRect: NSRect, outerRect: NSRect, start: Date, visibleWindow: TimeInterval) {
+        let gridColor = NSColor.separatorColor.withAlphaComponent(0.45)
+        gridColor.setStroke()
+
+        for ratio in stride(from: 0.25, through: 0.75, by: 0.25) {
+            let y = plotRect.maxY - plotRect.height * ratio
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: plotRect.minX, y: y))
+            path.line(to: NSPoint(x: plotRect.maxX, y: y))
+            path.lineWidth = 1
+            path.stroke()
+        }
+
+        for ratio in stride(from: 0.25, through: 0.75, by: 0.25) {
+            let x = plotRect.minX + plotRect.width * ratio
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: x, y: plotRect.minY))
+            path.line(to: NSPoint(x: x, y: plotRect.maxY))
+            path.lineWidth = 1
+            path.stroke()
+        }
+
+        drawYAxisLabel("1s", atY: plotRect.minY, outerRect: outerRect)
+        drawYAxisLabel("500ms", atY: plotRect.midY, outerRect: outerRect)
+        drawYAxisLabel("0ms", atY: plotRect.maxY, outerRect: outerRect)
+        drawXAxisLabels(in: plotRect, outerRect: outerRect, start: start, visibleWindow: visibleWindow)
+    }
+
+    private func graphWindowLength(from oldestSample: Date, to now: Date) -> TimeInterval {
+        let sampleSpan = max(0, now.timeIntervalSince(oldestSample))
+        guard sampleSpan < 3600 else { return 3600 }
+        let paddedSpan = max(60, sampleSpan + 15)
+        let roundedMinutes = ceil(paddedSpan / 60)
+        return min(3600, roundedMinutes * 60)
+    }
+
+    private func drawYAxisLabel(_ label: String, atY y: CGFloat, outerRect: NSRect) {
+        let font = NSFont.systemFont(ofSize: 11)
+        let labelSize = textSize(label, font: font)
+        let point = NSPoint(
+            x: outerRect.minX + 8,
+            y: y - labelSize.height / 2
+        )
+        drawText(label, at: point, font: font, color: .tertiaryLabelColor)
+    }
+
+    private func drawXAxisLabels(in plotRect: NSRect, outerRect: NSRect, start: Date, visibleWindow: TimeInterval) {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        let labels: [(text: String, x: CGFloat, alignment: NSTextAlignment)] = [
+            (Self.axisTimeFormatter.string(from: start), plotRect.minX, .left),
+            (Self.axisTimeFormatter.string(from: start.addingTimeInterval(visibleWindow / 2)), plotRect.midX, .center),
+            (Self.axisTimeFormatter.string(from: start.addingTimeInterval(visibleWindow)), plotRect.maxX, .right)
+        ]
+
+        let y = outerRect.maxY - 22
+        var occupiedRects: [NSRect] = []
+
+        for label in labels {
+            let size = textSize(label.text, font: font)
+            let x: CGFloat
+            switch label.alignment {
+            case .left:
+                x = label.x
+            case .right:
+                x = label.x - size.width
+            default:
+                x = label.x - size.width / 2
+            }
+
+            let labelRect = NSRect(x: x, y: y, width: size.width, height: size.height).insetBy(dx: -6, dy: -2)
+            guard outerRect.contains(labelRect), !occupiedRects.contains(where: { $0.intersects(labelRect) }) else {
+                continue
+            }
+
+            drawText(label.text, at: NSPoint(x: x, y: y), font: font, color: .tertiaryLabelColor)
+            occupiedRects.append(labelRect)
+        }
     }
 
     private func drawFooter(in rect: NSRect) {
@@ -522,13 +634,16 @@ final class ConnectivityGraphView: NSView {
         NSBezierPath(ovalIn: NSRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)).fill()
     }
 
-    private func drawFailureMarker(x: CGFloat, rect: NSRect) {
-        NSColor.systemRed.setStroke()
-        let path = NSBezierPath()
-        path.move(to: NSPoint(x: x, y: rect.minY))
-        path.line(to: NSPoint(x: x, y: rect.maxY))
-        path.lineWidth = 2
-        path.stroke()
+    private func drawFailureMarker(x: CGFloat, rect: NSRect, visibleWindow: TimeInterval) {
+        let probeWidth = max(3, rect.width * 5 / CGFloat(visibleWindow))
+        let markerRect = NSRect(
+            x: x - probeWidth / 2,
+            y: rect.minY,
+            width: probeWidth,
+            height: rect.height
+        )
+        NSColor.systemRed.withAlphaComponent(0.16).setFill()
+        NSBezierPath(roundedRect: markerRect, xRadius: 2, yRadius: 2).fill()
     }
 
     private func drawText(_ text: String, at point: NSPoint, font: NSFont, color: NSColor) {
@@ -538,4 +653,16 @@ final class ConnectivityGraphView: NSView {
         ]
         text.draw(at: point, withAttributes: attributes)
     }
+
+    private func textSize(_ text: String, font: NSFont) -> NSSize {
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        return text.size(withAttributes: attributes)
+    }
+
+    private static let axisTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        return formatter
+    }()
 }
