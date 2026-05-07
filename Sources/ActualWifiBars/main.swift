@@ -194,7 +194,8 @@ enum StatusIconRenderer {
     }
 
     private static func drawExclamation(in size: NSSize) {
-        NSColor.systemYellow.setStroke()
+        let warningMarkColor = NSColor(calibratedRed: 1.0, green: 0.92, blue: 0.0, alpha: 1.0)
+        warningMarkColor.setStroke()
         let path = NSBezierPath()
         path.move(to: NSPoint(x: 16, y: 7.8))
         path.line(to: NSPoint(x: 16, y: 13.8))
@@ -202,7 +203,7 @@ enum StatusIconRenderer {
         path.lineCapStyle = .round
         path.stroke()
 
-        NSColor.systemYellow.setFill()
+        warningMarkColor.setFill()
         NSBezierPath(ovalIn: NSRect(x: 15, y: 3.8, width: 2, height: 2)).fill()
     }
 }
