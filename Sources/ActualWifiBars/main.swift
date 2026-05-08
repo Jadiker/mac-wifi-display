@@ -238,6 +238,27 @@ struct ConnectionSnapshot {
         recent.filter(\.success)
     }
 
+    private var statusProbes: [ProbeResult] {
+        Array(history.suffix(3))
+    }
+
+    private var statusSuccesses: [ProbeResult] {
+        statusProbes.filter(\.success)
+    }
+
+    private var latestProbe: ProbeResult? {
+        history.last
+    }
+
+    private var statusReliability: Double {
+        guard !statusProbes.isEmpty else { return 0 }
+        return Double(statusSuccesses.count) / Double(statusProbes.count)
+    }
+
+    private var latestLatency: TimeInterval? {
+        latestProbe?.latency
+    }
+
     private var medianLatency: TimeInterval? {
         let values = successes.compactMap(\.latency).sorted()
         guard !values.isEmpty else { return nil }
@@ -256,12 +277,13 @@ struct ConnectionSnapshot {
     }
 
     var tintColor: NSColor {
-        guard reliability > 0 else { return .systemRed }
-        guard let latency = medianLatency else { return .labelColor }
+        guard !statusProbes.isEmpty else { return .labelColor }
+        guard latestProbe?.success == true else { return .systemRed }
+        guard let latency = latestLatency else { return .systemRed }
 
-        if reliability >= 0.9 && latency < 0.12 { return .systemGreen }
-        if reliability >= 0.8 && latency < 0.25 { return .systemBlue }
-        if reliability >= 0.65 && latency < 0.50 { return .systemOrange }
+        if statusReliability >= 1.0 && latency < 0.12 { return .systemGreen }
+        if statusReliability >= 0.67 && latency < 0.25 { return .systemBlue }
+        if statusReliability >= 0.67 && latency < 0.50 { return .systemOrange }
         return .systemRed
     }
 

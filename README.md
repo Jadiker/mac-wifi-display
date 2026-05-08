@@ -2,11 +2,11 @@
 
 A tiny native macOS menu bar app that checks whether the internet is actually usable, instead of trusting the system Wi-Fi icon.
 
-Actual Wi-Fi Bars runs as an accessory app in the menu bar. Every 5 seconds it sends a low-bandwidth HTTPS `HEAD` request to Google's `generate_204` endpoint, measures response latency, and scores the last 12 checks for the current status. It keeps the last hour of probes for the graph and bandwidth estimate.
+Actual Wi-Fi Bars runs as an accessory app in the menu bar. Every 5 seconds it sends a low-bandwidth HTTPS `HEAD` request to Google's `generate_204` endpoint, measures response latency, and scores the last 12 checks for the menu status. The menu bar color reacts to the latest probe and the last three checks, so failures show up quickly. It keeps the last hour of probes for the graph and bandwidth estimate.
 
 The icon stays compact by drawing a Wi-Fi symbol directly in the menu bar:
 
-- Green: excellent recent reliability and latency
+- Green: excellent latest latency with three clean recent probes
 - Blue: good connection
 - Orange: weak connection
 - Red: unstable, offline, or blocked

@@ -1,7 +1,52 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+usage() {
+    cat <<'EOF'
+Usage: scripts/build_app.sh [--install] [--help]
+
+Builds the Actual Wi-Fi Bars macOS app bundle.
+
+Options:
+  --install    Copy the built app to /Applications after building
+  --help       Show this help message
+
+Environment:
+  CONFIGURATION=debug|release    Build configuration (default: release)
+EOF
+}
+
+SCRIPT_IS_SOURCED=0
+if [[ -n "${BASH_VERSION:-}" && "${BASH_SOURCE[0]}" != "$0" ]]; then
+    SCRIPT_IS_SOURCED=1
+elif [[ -n "${ZSH_VERSION:-}" && "${ZSH_EVAL_CONTEXT:-}" == *:file* ]]; then
+    SCRIPT_IS_SOURCED=1
+fi
+
+if [[ "$SCRIPT_IS_SOURCED" == "1" ]]; then
+    usage
+    echo
+    echo "This script should be executed, not sourced. Run: ./build_app.sh"
+    return 2
+fi
+
+case "${1:-}" in
+    ""|"--install")
+        ;;
+    "--help"|"-h")
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        echo >&2
+        echo "Unknown option: $1" >&2
+        exit 2
+        ;;
+esac
+
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+ROOT_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
 CONFIGURATION="${CONFIGURATION:-release}"
 APP_NAME="Actual Wi-Fi Bars"
 BUNDLE_PATH="$ROOT_DIR/.build/$CONFIGURATION/$APP_NAME.app"
