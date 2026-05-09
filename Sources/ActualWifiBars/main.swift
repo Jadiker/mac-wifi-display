@@ -64,13 +64,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setStatusIcon(named: snapshot.systemSymbolName, accessibilityDescription: snapshot.summary, tintColor: snapshot.tintColor)
         statusItem.button?.toolTip = snapshot.tooltip
 
-        statusMenuItem.title = snapshot.summary
+        statusMenuItem.title = "Signal: \(snapshot.signalDescription)"
         latencyMenuItem.title = "Latency: \(snapshot.latencyText)"
-        reliabilityMenuItem.title = "Reliability: \(snapshot.reliabilityText)"
+        reliabilityMenuItem.title = "Reliability: \(snapshot.reliabilityDescription)"
         dataMenuItem.title = "Data: \(snapshot.dataText)"
         lastCheckMenuItem.title = "Last check: \(snapshot.checkedAtText)"
         (graphWindow?.contentView as? ConnectivityGraphView)?.snapshot = snapshot
-        appLogger.info("Rendered status. summary=\(snapshot.summary, privacy: .public) symbol=\(snapshot.systemSymbolName, privacy: .public) latency=\(snapshot.latencyText, privacy: .public) reliability=\(snapshot.reliabilityText, privacy: .public)")
+        appLogger.info("Rendered status. signal=\(snapshot.signalText, privacy: .public) symbol=\(snapshot.systemSymbolName, privacy: .public) latency=\(snapshot.latencyText, privacy: .public) reliability=\(snapshot.reliabilityDescription, privacy: .public)")
     }
 
     private func setStatusIcon(named symbolName: String, accessibilityDescription: String, tintColor: NSColor) {
@@ -227,6 +227,59 @@ struct ProbeResult {
     let bytesReceived: Int
 }
 
+private enum ConnectionQuality {
+    case checking
+    case excellent
+    case good
+    case weak
+    case unstable
+
+    var color: NSColor {
+        switch self {
+        case .checking:
+            return .labelColor
+        case .excellent:
+            return .systemGreen
+        case .good:
+            return .systemBlue
+        case .weak:
+            return .systemOrange
+        case .unstable:
+            return .systemRed
+        }
+    }
+
+    var summary: String {
+        switch self {
+        case .checking:
+            return "Checking..."
+        case .excellent:
+            return "Excellent connection"
+        case .good:
+            return "Good connection"
+        case .weak:
+            return "Weak connection"
+        case .unstable:
+            return "Unstable connection"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .checking:
+            return "Checking"
+        case .excellent:
+            return "Excellent"
+        case .good:
+            return "Good"
+        case .weak:
+            return "Weak"
+        case .unstable:
+            return "Unstable"
+        }
+    }
+}
+
 struct ConnectionSnapshot {
     let history: [ProbeResult]
 
@@ -270,31 +323,54 @@ struct ConnectionSnapshot {
         return Double(successes.count) / Double(recent.count)
     }
 
+    private var reliabilityQuality: ConnectionQuality {
+        guard !recent.isEmpty else { return .checking }
+        guard reliability > 0 else { return .unstable }
+
+        if reliability >= 0.9 { return .excellent }
+        if reliability >= 0.8 { return .good }
+        return .weak
+    }
+
     var systemSymbolName: String {
         guard reliability > 0 else { return "wifi.slash" }
         if reliability < 0.65 { return "wifi.exclamationmark" }
         return "wifi"
     }
 
-    var tintColor: NSColor {
-        guard !statusProbes.isEmpty else { return .labelColor }
-        guard latestProbe?.success == true else { return .systemRed }
-        guard let latency = latestLatency else { return .systemRed }
+    private var quality: ConnectionQuality {
+        guard !statusProbes.isEmpty else { return .checking }
+        guard latestProbe?.success == true else { return .unstable }
+        guard let latency = latestLatency else { return .unstable }
 
-        if statusReliability >= 1.0 && latency < 0.12 { return .systemGreen }
-        if statusReliability >= 0.67 && latency < 0.25 { return .systemBlue }
-        if statusReliability >= 0.67 && latency < 0.50 { return .systemOrange }
-        return .systemRed
+        if statusReliability >= 1.0 && latency < 0.12 { return .excellent }
+        if statusReliability >= 0.67 && latency < 0.25 { return .good }
+        if statusReliability >= 0.67 && latency < 0.50 { return .weak }
+        return .unstable
+    }
+
+    var tintColor: NSColor {
+        quality.color
     }
 
     var summary: String {
-        guard reliability > 0 else { return "Offline or blocked" }
-        guard let latency = medianLatency else { return "Checking..." }
+        quality.summary
+    }
 
-        if reliability >= 0.9 && latency < 0.12 { return "Excellent connection" }
-        if reliability >= 0.8 && latency < 0.25 { return "Good connection" }
-        if reliability >= 0.65 && latency < 0.50 { return "Weak connection" }
-        return "Unstable connection"
+    var signalText: String {
+        quality.label
+    }
+
+    var signalDescription: String {
+        let probeCount = statusProbes.count
+        let successCount = statusSuccesses.count
+        let probeText = "\(successCount)/\(probeCount) recent probes"
+
+        guard probeCount > 0 else { return "\(signalText) (waiting for probe)" }
+        guard latestProbe?.success == true else { return "\(signalText) (latest failed, \(probeText))" }
+        guard let latestLatency else { return "\(signalText) (latest latency unavailable, \(probeText))" }
+
+        return "\(signalText) (\(Int(latestLatency * 1000)) ms latest, \(probeText))"
     }
 
     var latencyText: String {
@@ -304,6 +380,10 @@ struct ConnectionSnapshot {
 
     var reliabilityText: String {
         "\(Int((reliability * 100).rounded()))% over last \(recent.count)"
+    }
+
+    var reliabilityDescription: String {
+        "\(reliabilityQuality.label) (\(reliabilityText))"
     }
 
     var dataText: String {
@@ -316,7 +396,7 @@ struct ConnectionSnapshot {
     }
 
     var tooltip: String {
-        "\(summary)\n\(latencyText), \(reliabilityText)"
+        "Signal: \(signalDescription)\nReliability: \(reliabilityDescription)\nLatency: \(latencyText)"
     }
 
     private static let timeFormatter: DateFormatter = {
