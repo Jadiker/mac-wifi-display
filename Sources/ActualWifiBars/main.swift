@@ -55,6 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Check Now", action: #selector(checkNow), keyEquivalent: "r"))
         menu.addItem(NSMenuItem(title: "Show Connectivity Graph", action: #selector(showGraph), keyEquivalent: "g"))
+        menu.addItem(NSMenuItem(title: "Open Wi-Fi Settings", action: #selector(openWiFiSettings), keyEquivalent: ","))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Actual Wi-Fi Bars", action: #selector(quit), keyEquivalent: "q"))
     }
@@ -129,6 +130,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         graphWindow = window
+    }
+
+    @objc private func openWiFiSettings() {
+        appLogger.notice("Open Wi-Fi settings requested")
+
+        let settingsURLs = [
+            "x-apple.systempreferences:com.apple.WiFi-Settings.extension",
+            "x-apple.systempreferences:com.apple.preference.network"
+        ]
+
+        for settingsURL in settingsURLs {
+            guard let url = URL(string: settingsURL) else { continue }
+            if NSWorkspace.shared.open(url) {
+                return
+            }
+        }
+
+        appLogger.error("Failed to open Wi-Fi settings")
     }
 
     @objc private func quit() {
