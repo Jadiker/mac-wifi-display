@@ -136,7 +136,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appLogger.notice("Open Wi-Fi settings requested")
 
         let settingsURLs = [
-            "x-apple.systempreferences:com.apple.WiFi-Settings.extension",
+            "x-apple.systempreferences:com.apple.Wi-Fi-Settings.extension",
+            "x-apple.systempreferences:com.apple.wifi-settings-extension",
+            "x-apple.systempreferences:com.apple.Network",
             "x-apple.systempreferences:com.apple.preference.network"
         ]
 
