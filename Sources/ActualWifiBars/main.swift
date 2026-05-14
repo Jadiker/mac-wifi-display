@@ -53,11 +53,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(lastCheckMenuItem)
         menu.addItem(versionMenuItem)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Check Now", action: #selector(checkNow), keyEquivalent: "r"))
-        menu.addItem(NSMenuItem(title: "Show Connectivity Graph", action: #selector(showGraph), keyEquivalent: "g"))
-        menu.addItem(NSMenuItem(title: "Open Wi-Fi Settings", action: #selector(openWiFiSettings), keyEquivalent: ","))
+        menu.addItem(actionMenuItem(title: "Check Now", action: #selector(checkNow), keyEquivalent: "r"))
+        menu.addItem(actionMenuItem(title: "Show Connectivity Graph", action: #selector(showGraph), keyEquivalent: "g"))
+        menu.addItem(actionMenuItem(title: "Open Wi-Fi Settings", action: #selector(openWiFiSettings), keyEquivalent: ","))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit Actual Wi-Fi Bars", action: #selector(quit), keyEquivalent: "q"))
+        menu.addItem(actionMenuItem(title: "Quit Actual Wi-Fi Bars", action: #selector(quit), keyEquivalent: "q"))
+    }
+
+    private func actionMenuItem(title: String, action: Selector, keyEquivalent: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
+        item.target = self
+        return item
     }
 
     private func render(_ snapshot: ConnectionSnapshot) {
@@ -136,9 +142,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appLogger.notice("Open Wi-Fi settings requested")
 
         let settingsURLs = [
-            "x-apple.systempreferences:com.apple.Wi-Fi-Settings.extension",
             "x-apple.systempreferences:com.apple.wifi-settings-extension",
-            "x-apple.systempreferences:com.apple.Network",
+            "x-apple.systempreferences:com.apple.Network-Settings.extension?Wi-Fi",
             "x-apple.systempreferences:com.apple.preference.network"
         ]
 
